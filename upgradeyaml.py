@@ -17,9 +17,9 @@ class UpgradeYaml(object):
         
     def setup_argparse(self):
         parser = argparse.ArgumentParser(description='pass in file paths information to the program')
-        parser.add_argument('--oldconfig', help='existing configuration file', required=True)
-        parser.add_argument('--newconfig', help='new configuration file', required=True)
-        parser.add_argument('--destconfig', help='destination configuration file', required=True)
+        parser.add_argument('--old', help='source config file', required=True)
+        parser.add_argument('--new', help='which version are you upgrading to?', required=True)
+        parser.add_argument('--dest', help='destination configuration file', required=True)
         self.args = vars(parser.parse_args())
     
     def read_yaml(self, path):
@@ -30,7 +30,7 @@ class UpgradeYaml(object):
     def populate_configs(self):
         """using our read_yaml method, we pull the information in from
         the configuration files and store it for futher use"""
-        for item in ['oldconfig', 'newconfig']:
+        for item in ['old', 'new']:
             self.yaml_config[item] = self.read_yaml(os.path.abspath(self.args[item]))
             self.raw_config[item] = self.read_rawconfig(os.path.abspath(self.args[item]))
 
@@ -41,12 +41,12 @@ class UpgradeYaml(object):
         
     def parse_keys(self):
         """separate the depricated, unused, and new keys"""
-        new_keys = list(set(self.yaml_config['newconfig']) - set(self.yaml_config['oldconfig']))
-        old_keys = list(set(self.yaml_config['oldconfig']) - set(self.yaml_config['newconfig']))
-        depricated = [a for a in old_keys if a not in self.check_keys('newconfig', old_keys)]
+        new_keys = list(set(self.yaml_config['new']) - set(self.yaml_config['old']))
+        old_keys = list(set(self.yaml_config['old']) - set(self.yaml_config['new']))
+        depricated = [a for a in old_keys if a not in self.check_keys('new', old_keys)]
         for key in depricated:
-            self.yaml_config['oldconfig'].pop(key)
-        self.yaml_config['newconfig'].update(self.yaml_config['oldconfig'])
+            self.yaml_config['old'].pop(key)
+        self.yaml_config['new'].update(self.yaml_config['old'])
         return depricated
     
     def update_keys(self, config_ver, key_list):
@@ -92,16 +92,16 @@ class UpgradeYaml(object):
         print"""
         I'm going to write the new config file with these settings:
         """
-        pprint(self.yaml_config['newconfig'])
+        pprint(self.yaml_config['new'])
         print """
         is this ok? y/n
         """
         response = raw_input()
         if 'y' in response.lower():
-            self.writeyaml(self.yaml_config['newconfig'], self.args['destconfig'])
+            self.writeyaml(self.yaml_config['new'], self.args['dest'])
             print """
             Done, thanks! I copied your custom settings from {} into {} and wrote them to {}
-            """.format('oldconfig', 'newconfig', 'destconfig')
+            """.format('old', 'new', 'dest')
         elif 'n' in response.lower():
             print "ok, not upgrading"        
             
